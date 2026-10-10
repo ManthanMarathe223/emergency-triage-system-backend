@@ -1,0 +1,1 @@
+"""Hospitals data feature package."""
