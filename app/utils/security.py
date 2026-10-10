@@ -41,11 +41,29 @@ def verify_password(plain_password: str, hashed_password: Optional[str]) -> bool
     )
 
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "development-only-change-this-secret")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 bearer_scheme = HTTPBearer(auto_error=True)
+
+
+def validate_security_config() -> None:
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+    if environment in {"production", "prod"} or os.getenv("VERCEL") == "1":
+        if not JWT_SECRET_KEY or len(JWT_SECRET_KEY) < 32:
+            raise RuntimeError(
+                "JWT_SECRET_KEY must be set to a random value of at least 32 characters in production."
+            )
+
+
+def _signing_key() -> str:
+    validate_security_config()
+    if JWT_SECRET_KEY:
+        return JWT_SECRET_KEY
+    if os.getenv("TESTING") == "1":
+        return "test-only-jwt-secret-change-me-32-chars"
+    return "local-development-jwt-secret-change-me"
 
 
 def _create_token(hospital_id: str, token_type: str, lifetime: timedelta) -> str:
@@ -56,7 +74,7 @@ def _create_token(hospital_id: str, token_type: str, lifetime: timedelta) -> str
         "iat": now,
         "exp": now + lifetime,
     }
-    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, _signing_key(), algorithm=JWT_ALGORITHM)
 
 
 def create_access_token(hospital_id: str) -> str:
@@ -84,7 +102,7 @@ def decode_token(token: str, expected_type: str) -> dict[str, Any]:
     try:
         payload = jwt.decode(
             token,
-            JWT_SECRET_KEY,
+            _signing_key(),
             algorithms=[JWT_ALGORITHM],
             options={"require": ["sub", "type", "iat", "exp"]},
         )

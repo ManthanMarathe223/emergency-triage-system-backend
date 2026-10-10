@@ -233,8 +233,8 @@ def test_hospital_data_for_invalid_hospital_fails():
             "triage_status": "NORMAL",
         }
         res = client.post("/hospitals-data/", json=payload)
-        assert res.status_code == 404
-        assert "not found" in res.json()["detail"].lower()
+        assert res.status_code == 403
+        assert "authorized" in res.json()["detail"].lower()
 
 
 def test_hospital_data_validation_errors():
@@ -262,3 +262,44 @@ def test_hospital_data_validation_errors():
             },
         )
         assert res_doc.status_code == 422
+
+
+def test_hospital_cannot_access_another_hospitals_operational_data():
+    with TestClient(app) as client:
+        first_id = create_sample_hospital(client)
+        created = client.post(
+            "/hospitals-data/",
+            json={"hospital_id": first_id, "general_beds_total": 10},
+        )
+        assert created.status_code == 201
+        data_id = created.json()["id"]
+
+        second = client.post(
+            "/hospitals/register",
+            json={
+                "name": "Second Hospital",
+                "registration_number": "MTC-1000",
+                "password": "securepassword123",
+                "address": "46 Emergency Blvd",
+                "latitude": 19.077,
+                "longitude": 72.873,
+            },
+        )
+        assert second.status_code == 201
+        token = client.post(
+            "/hospitals/login",
+            json={
+                "registration_number": "MTC-1000",
+                "password": "securepassword123",
+            },
+        )
+        client.headers.update(
+            {"Authorization": f"Bearer {token.json()['access_token']}"}
+        )
+
+        assert client.get(f"/hospitals-data/{data_id}").status_code == 404
+        assert client.delete(f"/hospitals-data/{data_id}").status_code == 404
+        assert client.post(
+            "/hospitals-data/",
+            json={"hospital_id": first_id, "general_beds_total": 20},
+        ).status_code == 403

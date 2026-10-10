@@ -172,3 +172,21 @@ def test_empty_update_is_rejected():
         created = client.post("/hospitals/register", json=hospital_payload())
         authenticate(client)
         assert client.patch(f"/hospitals/{created.json()['id']}", json={}).status_code == 422
+
+
+def test_hospital_cannot_access_another_hospital():
+    with TestClient(app) as client:
+        first = client.post("/hospitals/register", json=hospital_payload())
+        second = client.post(
+            "/hospitals/register",
+            json=hospital_payload(
+                name="Second Hospital", registration_number="CGH-002"
+            ),
+        )
+        authenticate(client, "CGH-002")
+        first_id = first.json()["id"]
+        assert client.get(f"/hospitals/{first_id}").status_code == 404
+        assert client.patch(
+            f"/hospitals/{first_id}/availability",
+            json={"total_beds": 100, "available_beds": 20},
+        ).status_code == 403

@@ -25,7 +25,24 @@ def get_client() -> MongoClient:
 
             _client = mongomock.MongoClient()
         else:
-            _client = MongoClient(MONGODB_URL)
+            environment = os.getenv("ENVIRONMENT", "development").lower()
+            if environment in {"production", "prod"} or os.getenv("VERCEL") == "1":
+                if not os.getenv("MONGODB_URL") or not os.getenv("DATABASE_NAME"):
+                    raise RuntimeError(
+                        "MONGODB_URL and DATABASE_NAME must be configured in production."
+                    )
+                if not MONGODB_URL.startswith("mongodb+srv://"):
+                    raise RuntimeError(
+                        "Production MongoDB configuration must use a TLS-enabled mongodb+srv:// Atlas URI."
+                    )
+            _client = MongoClient(
+                MONGODB_URL,
+                connectTimeoutMS=5_000,
+                serverSelectionTimeoutMS=5_000,
+                socketTimeoutMS=10_000,
+                maxPoolSize=10,
+                retryWrites=True,
+            )
     return _client
 
 

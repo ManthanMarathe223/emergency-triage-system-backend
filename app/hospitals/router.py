@@ -68,7 +68,7 @@ def register_hospital_alias_endpoint(
 def login_hospital_endpoint(
     payload: HospitalLoginDTO,
     db: Database = Depends(get_db),
-) -> HospitalLoginResponseDTO:
+) -> TokenResponseDTO:
     """Verify credentials and issue access and refresh JWTs."""
     return issue_tokens(db, payload)
 
@@ -132,10 +132,10 @@ def list_public_hospitals_endpoint(
 )
 def list_hospitals_endpoint(
     db: Database = Depends(get_db),
-    _: str = Depends(get_current_hospital_id),
+    hospital_id: str = Depends(get_current_hospital_id),
 ) -> list[dict[str, Any]]:
     """Retrieve all registered hospitals."""
-    return list_hospitals(db)
+    return list_hospitals(db, hospital_id)
 
 
 @router.get(
@@ -146,10 +146,10 @@ def list_hospitals_endpoint(
 def get_hospital_endpoint(
     hospital_id: str,
     db: Database = Depends(get_db),
-    _: str = Depends(get_current_hospital_id),
+    authenticated_hospital_id: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Retrieve hospital details by ID."""
-    return get_hospital_by_id(db, hospital_id)
+    return get_hospital_by_id(db, hospital_id, authenticated_hospital_id)
 
 
 @router.put(
@@ -166,10 +166,10 @@ def update_hospital_endpoint(
     hospital_id: str,
     payload: HospitalUpdateDTO,
     db: Database = Depends(get_db),
-    _: str = Depends(get_current_hospital_id),
+    authenticated_hospital_id: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Update details for a registered hospital."""
-    return update_hospital(db, hospital_id, payload)
+    return update_hospital(db, hospital_id, payload, authenticated_hospital_id)
 
 
 @router.patch(
@@ -181,7 +181,9 @@ def update_hospital_availability_endpoint(
     hospital_id: str,
     payload: HospitalAvailabilityUpdateDTO,
     db: Database = Depends(get_db),
-    _: str = Depends(get_current_hospital_id),
+    authenticated_hospital_id: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Update bed availability for a registered hospital."""
-    return update_hospital_availability(db, hospital_id, payload)
+    return update_hospital_availability(
+        db, hospital_id, payload, authenticated_hospital_id
+    )
