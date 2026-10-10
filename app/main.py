@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 allowed_origins = [
+    "https://ai-lifelink.vercel.app",
     "https://emergency-triage-six.vercel.app",
     "http://localhost:3000",
     "http://localhost:5173",
@@ -36,8 +37,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(hospital_router)
