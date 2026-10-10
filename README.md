@@ -45,15 +45,17 @@ app/
 
 ### Hospitals (`/hospitals`)
 - `POST /hospitals/register`: Register a hospital with bed capacity & portal credentials.
-- `POST /hospitals/login`: Simple credential verification without JWT.
-- `GET /hospitals/`: List all registered hospitals.
-- `GET /hospitals/{hospital_id}`: Retrieve single hospital details.
-- `PUT /hospitals/{hospital_id}`: Update hospital profile & capacity details.
-- `PATCH /hospitals/{hospital_id}`: Partial update hospital profile.
-- `PATCH /hospitals/{hospital_id}/availability`: Update hospital bed counts.
+- `POST /hospitals/login`: Verify credentials and issue JWT access and refresh tokens.
+- `POST /hospitals/refresh`: Exchange a valid refresh token for a new token pair.
+- `GET /hospitals/public`: Public list of active hospital names and locations; no login required.
+- `GET /hospitals/`: List all registered hospitals; requires a bearer access token.
+- `GET /hospitals/{hospital_id}`: Retrieve single hospital details; requires a bearer access token.
+- `PUT /hospitals/{hospital_id}`: Update hospital profile & capacity details; requires a bearer access token.
+- `PATCH /hospitals/{hospital_id}`: Partial update hospital profile; requires a bearer access token.
+- `PATCH /hospitals/{hospital_id}/availability`: Update hospital bed counts; requires a bearer access token.
 
 ### Hospitals Operational Data (`/hospitals-data`)
-- `POST /hospitals-data/`: Create operational resource entry (beds, ICU, ventilators, oxygen, doctors on-duty, triage status).
+- `POST /hospitals-data/`: Create operational resource entry (beds, ICU, ventilators, oxygen, doctor aggregates, doctor details, and triage status).
 - `GET /hospitals-data/`: List all recent operational data records.
 - `GET /hospitals-data/{data_id}`: Get single operational record by ID.
 - `PUT /hospitals-data/{data_id}`: Update operational record and resource counts.
@@ -62,7 +64,51 @@ app/
 - `GET /hospitals-data/hospital/{hospital_id}/latest`: Get latest metrics for a hospital.
 - `GET /hospitals-data/hospital/{hospital_id}/history`: Get historical logs for a hospital.
 
+Each `hospitals-data` record can include a `doctors` array. Every doctor entry
+requires `doctor_id`, `name`, `specialization`, and `is_available`:
+
+```json
+{
+  "hospital_id": "507f1f77bcf86cd799439011",
+  "doctors": [
+    {
+      "doctor_id": "DOC-001",
+      "name": "Dr. Asha Rao",
+      "specialization": "Emergency Medicine",
+      "is_available": true
+    }
+  ]
+}
+```
+
+The existing `doctors_total` and `doctors_available` fields remain aggregate
+summary values. The detailed list is optional for backward compatibility and
+defaults to an empty list.
+
 ### Health
 - `GET /health`: Health check (`{"status": "ok"}`).
 
 Interactive Swagger UI documentation is available at `http://127.0.0.1:8000/docs`.
+
+## JWT authentication
+
+Set `JWT_SECRET_KEY` to a long random value in the environment; never use the
+development fallback in production. After registration, call
+`POST /hospitals/login`:
+
+```json
+{
+  "registration_number": "CGH-001",
+  "password": "securepassword123"
+}
+```
+
+Send the returned access token on protected requests:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+Access tokens expire after `ACCESS_TOKEN_EXPIRE_MINUTES`. Refresh tokens expire
+after `REFRESH_TOKEN_EXPIRE_DAYS` and must only be sent to
+`POST /hospitals/refresh`.

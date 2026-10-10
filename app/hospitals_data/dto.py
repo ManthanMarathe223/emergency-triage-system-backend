@@ -4,10 +4,44 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class DoctorDTO(BaseModel):
+    """Doctor details reported as part of a hospital's operational snapshot."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    doctor_id: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Hospital-assigned doctor identifier",
+    )
+    name: str = Field(min_length=1, max_length=200, description="Doctor's name")
+    specialization: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Primary medical specialization",
+    )
+    is_available: bool = Field(
+        description="Whether the doctor is currently available for emergency duty"
+    )
+
+    @model_validator(mode="after")
+    def reject_blank_text(self) -> "DoctorDTO":
+        for field_name in ("doctor_id", "name", "specialization"):
+            value = getattr(self, field_name).strip()
+            if not value:
+                raise ValueError(f"{field_name} must not be blank")
+            setattr(self, field_name, value)
+        return self
+
+
 class HospitalDataCreateDTO(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     hospital_id: str = Field(min_length=1, description="Target hospital ID")
+    doctors: list[DoctorDTO] = Field(
+        default_factory=list,
+        description="Doctors and their current emergency-duty availability",
+    )
     general_beds_total: int = Field(ge=0, default=0, description="Total general ward beds")
     general_beds_available: int = Field(
         ge=0, default=0, description="Available general ward beds"
@@ -54,6 +88,7 @@ class HospitalDataCreateDTO(BaseModel):
 class HospitalDataUpdateDTO(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    doctors: Optional[list[DoctorDTO]] = None
     general_beds_total: Optional[int] = Field(default=None, ge=0)
     general_beds_available: Optional[int] = Field(default=None, ge=0)
     icu_beds_total: Optional[int] = Field(default=None, ge=0)
@@ -103,6 +138,7 @@ class HospitalDataResponseDTO(BaseModel):
 
     id: str
     hospital_id: str
+    doctors: list[DoctorDTO] = Field(default_factory=list)
     general_beds_total: int
     general_beds_available: int
     icu_beds_total: int
