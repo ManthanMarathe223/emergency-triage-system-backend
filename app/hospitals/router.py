@@ -6,7 +6,6 @@ from pymongo.database import Database
 from app.hospitals.controller import (
     get_hospital_by_id,
     list_hospitals,
-    login_hospital,
     register_hospital,
     update_hospital,
     update_hospital_availability,
@@ -14,12 +13,19 @@ from app.hospitals.controller import (
 from app.hospitals.dto import (
     HospitalAvailabilityUpdateDTO,
     HospitalLoginDTO,
-    HospitalLoginResponseDTO,
     HospitalRegisterDTO,
     HospitalResponseDTO,
     HospitalUpdateDTO,
 )
+from app.auth_dto import PublicHospitalDTO, RefreshTokenDTO, TokenResponseDTO
 from app.utils.database import get_db
+from app.utils.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_current_hospital_id,
+)
+from app.hospitals.controller import issue_tokens
 
 router = APIRouter(prefix="/hospitals", tags=["hospitals"])
 
@@ -55,16 +61,68 @@ def register_hospital_alias_endpoint(
 
 @router.post(
     "/login",
-    response_model=HospitalLoginResponseDTO,
+    response_model=TokenResponseDTO,
     status_code=status.HTTP_200_OK,
     summary="Hospital simple login",
 )
 def login_hospital_endpoint(
     payload: HospitalLoginDTO,
     db: Database = Depends(get_db),
-) -> HospitalLoginResponseDTO:
-    """Simple login endpoint using registration_number and password without JWT."""
-    return login_hospital(db, payload)
+) -> TokenResponseDTO:
+    """Verify credentials and issue access and refresh JWTs."""
+    return issue_tokens(db, payload)
+
+
+@router.post(
+    "/token",
+    response_model=TokenResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Issue JWT access and refresh tokens",
+)
+def token_endpoint(
+    payload: HospitalLoginDTO,
+    db: Database = Depends(get_db),
+) -> TokenResponseDTO:
+    return issue_tokens(db, payload)
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Refresh JWT access and refresh tokens",
+)
+def refresh_token_endpoint(payload: RefreshTokenDTO) -> TokenResponseDTO:
+    hospital_id = str(decode_token(payload.refresh_token, "refresh")["sub"])
+    from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES
+
+    return TokenResponseDTO(
+        access_token=create_access_token(hospital_id),
+        refresh_token=create_refresh_token(hospital_id),
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
+@router.get(
+    "/public",
+    response_model=list[PublicHospitalDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List public hospital names and locations",
+)
+def list_public_hospitals_endpoint(
+    db: Database = Depends(get_db),
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": hospital["id"],
+            "name": hospital["name"],
+            "address": hospital["address"],
+            "latitude": hospital["latitude"],
+            "longitude": hospital["longitude"],
+        }
+        for hospital in list_hospitals(db)
+        if hospital.get("is_active", True)
+    ]
 
 
 @router.get(
@@ -74,9 +132,10 @@ def login_hospital_endpoint(
 )
 def list_hospitals_endpoint(
     db: Database = Depends(get_db),
+    hospital_id: str = Depends(get_current_hospital_id),
 ) -> list[dict[str, Any]]:
     """Retrieve all registered hospitals."""
-    return list_hospitals(db)
+    return list_hospitals(db, hospital_id)
 
 
 @router.get(
@@ -87,9 +146,10 @@ def list_hospitals_endpoint(
 def get_hospital_endpoint(
     hospital_id: str,
     db: Database = Depends(get_db),
+    authenticated_hospital_id: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Retrieve hospital details by ID."""
-    return get_hospital_by_id(db, hospital_id)
+    return get_hospital_by_id(db, hospital_id, authenticated_hospital_id)
 
 
 @router.put(
@@ -106,9 +166,10 @@ def update_hospital_endpoint(
     hospital_id: str,
     payload: HospitalUpdateDTO,
     db: Database = Depends(get_db),
+    authenticated_hospital_id: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Update details for a registered hospital."""
-    return update_hospital(db, hospital_id, payload)
+    return update_hospital(db, hospital_id, payload, authenticated_hospital_id)
 
 
 @router.patch(
@@ -120,6 +181,9 @@ def update_hospital_availability_endpoint(
     hospital_id: str,
     payload: HospitalAvailabilityUpdateDTO,
     db: Database = Depends(get_db),
+    authenticated_hospital_id: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Update bed availability for a registered hospital."""
-    return update_hospital_availability(db, hospital_id, payload)
+    return update_hospital_availability(
+        db, hospital_id, payload, authenticated_hospital_id
+    )

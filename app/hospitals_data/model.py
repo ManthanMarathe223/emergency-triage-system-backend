@@ -1,13 +1,14 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HospitalDataModel(BaseModel):
     """Document model representing hospital operational resources in MongoDB collection 'hospitals_data'."""
 
     hospital_id: str
+    doctors: list[dict[str, object]] = Field(default_factory=list)
     general_beds_total: int = 0
     general_beds_available: int = 0
     icu_beds_total: int = 0

@@ -8,10 +8,12 @@ from pydantic import BaseModel
 from app.hospitals.router import router as hospital_router
 from app.hospitals_data.router import router as hospitals_data_router
 from app.utils.database import init_db
+from app.utils.security import validate_security_config
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    validate_security_config()
     init_db()
     yield
 

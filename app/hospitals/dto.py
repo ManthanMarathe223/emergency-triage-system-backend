@@ -11,8 +11,7 @@ class HospitalRegisterDTO(BaseModel):
     registration_number: str = Field(
         min_length=1, max_length=100, description="Unique registration license/number"
     )
-    password: Optional[str] = Field(
-        default=None,
+    password: str = Field(
         min_length=4,
         max_length=128,
         description="Password for hospital portal",

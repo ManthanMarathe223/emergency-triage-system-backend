@@ -9,13 +9,19 @@ from pymongo.errors import DuplicateKeyError
 from app.hospitals.dto import (
     HospitalAvailabilityUpdateDTO,
     HospitalLoginDTO,
-    HospitalLoginResponseDTO,
     HospitalRegisterDTO,
     HospitalResponseDTO,
     HospitalUpdateDTO,
 )
+from app.auth_dto import TokenResponseDTO
 from app.utils.database import serialize_doc, to_object_id
-from app.utils.security import hash_password, verify_password
+from app.utils.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+)
 
 
 def register_hospital(db: Database, payload: HospitalRegisterDTO) -> dict[str, Any]:
@@ -53,34 +59,44 @@ def register_hospital(db: Database, payload: HospitalRegisterDTO) -> dict[str, A
     return serialize_doc(hospital_doc)
 
 
-def login_hospital(db: Database, payload: HospitalLoginDTO) -> HospitalLoginResponseDTO:
-    """Verify hospital registration number and password without JWT."""
-    hospital = db.hospitals.find_one({"registration_number": payload.registration_number})
-    if hospital is None:
+def issue_tokens(db: Database, payload: HospitalLoginDTO) -> TokenResponseDTO:
+    hospital = db.hospitals.find_one(
+        {"registration_number": payload.registration_number}
+    )
+    if hospital is None or not verify_password(
+        payload.password, hospital.get("password_hash")
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid registration number or password.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    stored_hash = hospital.get("password_hash")
-    if stored_hash and not verify_password(payload.password, stored_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid registration number or password.",
+    if not hospital.get("password_hash", "").startswith("pbkdf2_sha256$"):
+        db.hospitals.update_one(
+            {"_id": hospital["_id"]},
+            {"$set": {"password_hash": hash_password(payload.password)}},
         )
-
-    serialized = serialize_doc(hospital)
-    return HospitalLoginResponseDTO(
-        message="Login successful",
-        hospital=HospitalResponseDTO.model_validate(serialized),
+    hospital_id = str(hospital["_id"])
+    return TokenResponseDTO(
+        access_token=create_access_token(hospital_id),
+        refresh_token=create_refresh_token(hospital_id),
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
 
 def update_hospital(
-    db: Database, hospital_id: str, payload: HospitalUpdateDTO
+    db: Database,
+    hospital_id: str,
+    payload: HospitalUpdateDTO,
+    authenticated_hospital_id: str,
 ) -> dict[str, Any]:
     """Update general hospital details in MongoDB."""
     obj_id = to_object_id(hospital_id)
+    if hospital_id != authenticated_hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to modify this hospital.",
+        )
     hospital = db.hospitals.find_one({"_id": obj_id})
     if hospital is None:
         raise HTTPException(
@@ -119,10 +135,18 @@ def update_hospital(
 
 
 def update_hospital_availability(
-    db: Database, hospital_id: str, payload: HospitalAvailabilityUpdateDTO
+    db: Database,
+    hospital_id: str,
+    payload: HospitalAvailabilityUpdateDTO,
+    authenticated_hospital_id: str,
 ) -> dict[str, Any]:
     """Update bed availability for a hospital."""
     obj_id = to_object_id(hospital_id)
+    if hospital_id != authenticated_hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to modify this hospital.",
+        )
     hospital = db.hospitals.find_one({"_id": obj_id})
     if hospital is None:
         raise HTTPException(
@@ -146,9 +170,16 @@ def update_hospital_availability(
     return serialize_doc(updated)
 
 
-def get_hospital_by_id(db: Database, hospital_id: str) -> dict[str, Any]:
+def get_hospital_by_id(
+    db: Database, hospital_id: str, authenticated_hospital_id: str
+) -> dict[str, Any]:
     """Retrieve hospital details by ID."""
     obj_id = to_object_id(hospital_id)
+    if hospital_id != authenticated_hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hospital not found.",
+        )
     hospital = db.hospitals.find_one({"_id": obj_id})
     if hospital is None:
         raise HTTPException(
@@ -158,7 +189,14 @@ def get_hospital_by_id(db: Database, hospital_id: str) -> dict[str, Any]:
     return serialize_doc(hospital)
 
 
-def list_hospitals(db: Database) -> list[dict[str, Any]]:
+def list_hospitals(
+    db: Database, authenticated_hospital_id: str | None = None
+) -> list[dict[str, Any]]:
     """Retrieve all hospitals ordered by creation date."""
-    hospitals = list(db.hospitals.find().sort("created_at", 1))
+    query = (
+        {"_id": to_object_id(authenticated_hospital_id)}
+        if authenticated_hospital_id
+        else {}
+    )
+    hospitals = list(db.hospitals.find(query).sort("created_at", 1))
     return [serialize_doc(h) for h in hospitals]
