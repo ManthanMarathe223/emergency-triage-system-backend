@@ -19,6 +19,7 @@ from app.hospitals_data.dto import (
     HospitalDataUpdateDTO,
 )
 from app.utils.database import get_db
+from app.utils.security import get_current_hospital_id
 
 router = APIRouter(prefix="/hospitals-data", tags=["hospitals_data"])
 
@@ -32,6 +33,7 @@ router = APIRouter(prefix="/hospitals-data", tags=["hospitals_data"])
 def create_hospital_data_endpoint(
     payload: HospitalDataCreateDTO,
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Create a new hospital resource data entry (beds, ICU, ventilators, oxygen, doctors)."""
     return create_hospital_data(db, payload)
@@ -45,6 +47,7 @@ def create_hospital_data_endpoint(
 def list_all_data_endpoint(
     limit: int = Query(default=100, ge=1, le=500),
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> list[dict[str, Any]]:
     """Retrieve operational data entries across all hospitals."""
     return list_all_hospitals_data(db, limit=limit)
@@ -58,6 +61,7 @@ def list_all_data_endpoint(
 def get_latest_data_endpoint(
     hospital_id: str,
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Retrieve latest operational metrics for a specific hospital."""
     return get_latest_hospital_data(db, hospital_id)
@@ -72,6 +76,7 @@ def get_data_history_endpoint(
     hospital_id: str,
     limit: int = Query(default=50, ge=1, le=200),
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> list[dict[str, Any]]:
     """Retrieve historical operational records for a specific hospital."""
     return get_hospital_data_history(db, hospital_id, limit=limit)
@@ -85,6 +90,7 @@ def get_data_history_endpoint(
 def get_data_by_id_endpoint(
     data_id: str,
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Retrieve a single operational data entry by its ID."""
     return get_hospital_data_by_id(db, data_id)
@@ -104,6 +110,7 @@ def update_data_endpoint(
     data_id: str,
     payload: HospitalDataUpdateDTO,
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> dict[str, Any]:
     """Update an operational data record and its resource counts."""
     return update_hospital_data(db, data_id, payload)
@@ -117,6 +124,7 @@ def update_data_endpoint(
 def delete_data_endpoint(
     data_id: str,
     db: Database = Depends(get_db),
+    _: str = Depends(get_current_hospital_id),
 ) -> HospitalDataDeleteResponseDTO:
     """Delete an operational data record by its ID."""
     return delete_hospital_data(db, data_id)

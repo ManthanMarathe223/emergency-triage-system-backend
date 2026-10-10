@@ -14,8 +14,15 @@ from app.hospitals.dto import (
     HospitalResponseDTO,
     HospitalUpdateDTO,
 )
+from app.auth_dto import TokenResponseDTO
 from app.utils.database import serialize_doc, to_object_id
-from app.utils.security import hash_password, verify_password
+from app.utils.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+)
 
 
 def register_hospital(db: Database, payload: HospitalRegisterDTO) -> dict[str, Any]:
@@ -53,26 +60,23 @@ def register_hospital(db: Database, payload: HospitalRegisterDTO) -> dict[str, A
     return serialize_doc(hospital_doc)
 
 
-def login_hospital(db: Database, payload: HospitalLoginDTO) -> HospitalLoginResponseDTO:
-    """Verify hospital registration number and password without JWT."""
-    hospital = db.hospitals.find_one({"registration_number": payload.registration_number})
-    if hospital is None:
+def issue_tokens(db: Database, payload: HospitalLoginDTO) -> TokenResponseDTO:
+    hospital = db.hospitals.find_one(
+        {"registration_number": payload.registration_number}
+    )
+    if hospital is None or not verify_password(
+        payload.password, hospital.get("password_hash")
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid registration number or password.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    stored_hash = hospital.get("password_hash")
-    if stored_hash and not verify_password(payload.password, stored_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid registration number or password.",
-        )
-
-    serialized = serialize_doc(hospital)
-    return HospitalLoginResponseDTO(
-        message="Login successful",
-        hospital=HospitalResponseDTO.model_validate(serialized),
+    hospital_id = str(hospital["_id"])
+    return TokenResponseDTO(
+        access_token=create_access_token(hospital_id),
+        refresh_token=create_refresh_token(hospital_id),
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
 

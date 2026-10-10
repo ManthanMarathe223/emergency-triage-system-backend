@@ -21,6 +21,7 @@ def create_sample_hospital(client: TestClient) -> str:
         json={
             "name": "Metro Trauma Center",
             "registration_number": "MTC-999",
+            "password": "securepassword123",
             "address": "45 Emergency Blvd",
             "latitude": 19.076,
             "longitude": 72.877,
@@ -30,6 +31,17 @@ def create_sample_hospital(client: TestClient) -> str:
         },
     )
     assert res.status_code == 201
+    token = client.post(
+        "/hospitals/login",
+        json={
+            "registration_number": "MTC-999",
+            "password": "securepassword123",
+        },
+    )
+    assert token.status_code == 200
+    client.headers.update(
+        {"Authorization": f"Bearer {token.json()['access_token']}"}
+    )
     return res.json()["id"]
 
 
@@ -39,6 +51,20 @@ def test_create_and_fetch_hospital_data():
 
         payload = {
             "hospital_id": hosp_id,
+            "doctors": [
+                {
+                    "doctor_id": "DOC-001",
+                    "name": "Dr. Asha Rao",
+                    "specialization": "Emergency Medicine",
+                    "is_available": True,
+                },
+                {
+                    "doctor_id": "DOC-002",
+                    "name": "Dr. Vikram Shah",
+                    "specialization": "Critical Care",
+                    "is_available": False,
+                },
+            ],
             "general_beds_total": 80,
             "general_beds_available": 30,
             "icu_beds_total": 20,
@@ -60,6 +86,9 @@ def test_create_and_fetch_hospital_data():
         assert data["doctors_total"] == 12
         assert data["doctors_available"] == 6
         assert data["triage_status"] == "NORMAL"
+        assert data["doctors"][0]["doctor_id"] == "DOC-001"
+        assert data["doctors"][0]["is_available"] is True
+        assert data["doctors"][1]["is_available"] is False
         assert "created_at" not in data
         assert "updated_at" not in data
         data_id = data["id"]
@@ -151,9 +180,45 @@ def test_partial_resource_update_cannot_exceed_existing_capacity():
         assert client.patch(f"/hospitals-data/{data_id}", json={}).status_code == 422
 
 
+def test_doctor_details_are_required_and_validated():
+    with TestClient(app) as client:
+        hosp_id = create_sample_hospital(client)
+        invalid_doctor = client.post(
+            "/hospitals-data/",
+            json={
+                "hospital_id": hosp_id,
+                "doctors": [
+                    {
+                        "doctor_id": "DOC-INVALID",
+                        "name": "Dr. Invalid",
+                        "specialization": "Emergency Medicine",
+                    }
+                ],
+            },
+        )
+        assert invalid_doctor.status_code == 422
+
+        blank_doctor = client.post(
+            "/hospitals-data/",
+            json={
+                "hospital_id": hosp_id,
+                "doctors": [
+                    {
+                        "doctor_id": " ",
+                        "name": "Dr. Blank",
+                        "specialization": "Emergency Medicine",
+                        "is_available": True,
+                    }
+                ],
+            },
+        )
+        assert blank_doctor.status_code == 422
+
+
 def test_hospital_data_for_invalid_hospital_fails():
     dummy_id = "507f1f77bcf86cd799439011"
     with TestClient(app) as client:
+        create_sample_hospital(client)
         payload = {
             "hospital_id": dummy_id,
             "general_beds_total": 50,
