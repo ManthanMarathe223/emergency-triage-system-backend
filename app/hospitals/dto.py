@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 
 class HospitalRegisterDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str = Field(min_length=1, max_length=200, description="Hospital name")
     registration_number: str = Field(
         min_length=1, max_length=100, description="Unique registration license/number"
@@ -48,6 +50,8 @@ HospitalCreateDTO = HospitalRegisterDTO
 
 
 class HospitalLoginDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     registration_number: str = Field(min_length=1, max_length=100)
     password: str = Field(min_length=1)
 
@@ -61,6 +65,8 @@ class HospitalLoginDTO(BaseModel):
 
 
 class HospitalUpdateDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: Optional[str] = Field(default=None, min_length=1, max_length=200)
     address: Optional[str] = Field(default=None, min_length=1, max_length=500)
     latitude: Optional[float] = Field(default=None, ge=-90, le=90)
@@ -81,8 +87,13 @@ class HospitalUpdateDTO(BaseModel):
             raise ValueError("available_beds cannot exceed total_beds")
         return self
 
+    def has_updates(self) -> bool:
+        return bool(self.model_dump(exclude_unset=True))
+
 
 class HospitalAvailabilityUpdateDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     total_beds: int = Field(ge=0, description="Updated total bed count")
     available_beds: int = Field(ge=0, description="Updated available bed count")
 
@@ -102,16 +113,14 @@ class HospitalResponseDTO(BaseModel):
     address: str
     latitude: float
     longitude: float
-    contact_number: Optional[str] = None
-    email: Optional[str] = None
     total_beds: int
     available_beds: int
     is_active: bool
     availability_updated_at: datetime
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
 
 class HospitalLoginResponseDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     message: str = "Login successful"
     hospital: HospitalResponseDTO

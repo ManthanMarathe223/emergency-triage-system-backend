@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class HospitalDataCreateDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     hospital_id: str = Field(min_length=1, description="Target hospital ID")
     general_beds_total: int = Field(ge=0, default=0, description="Total general ward beds")
     general_beds_available: int = Field(
@@ -50,6 +52,8 @@ class HospitalDataCreateDTO(BaseModel):
 
 
 class HospitalDataUpdateDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     general_beds_total: Optional[int] = Field(default=None, ge=0)
     general_beds_available: Optional[int] = Field(default=None, ge=0)
     icu_beds_total: Optional[int] = Field(default=None, ge=0)
@@ -111,10 +115,10 @@ class HospitalDataResponseDTO(BaseModel):
     triage_status: str
     notes: Optional[str]
     recorded_at: datetime
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
 
 class HospitalDataDeleteResponseDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     message: str = "Hospital data deleted successfully"
     id: str

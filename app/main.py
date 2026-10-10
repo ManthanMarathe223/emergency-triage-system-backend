@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.hospitals.router import router as hospital_router
 from app.hospitals_data.router import router as hospitals_data_router
@@ -43,6 +44,10 @@ app.include_router(hospital_router)
 app.include_router(hospitals_data_router)
 
 
-@app.get("/health", tags=["health"])
-def health_check() -> dict[str, str]:
+class HealthResponse(BaseModel):
+    status: str
+
+
+@app.get("/health", response_model=HealthResponse, status_code=200, tags=["health"])
+def health_check() -> HealthResponse:
     return {"status": "ok"}

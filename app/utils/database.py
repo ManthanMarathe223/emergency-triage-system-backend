@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import HTTPException, status
 from pymongo import MongoClient
 from pymongo.database import Database
@@ -46,11 +47,11 @@ def to_object_id(id_str: str) -> ObjectId:
     """Convert a string to a BSON ObjectId with validation."""
     try:
         return ObjectId(id_str)
-    except Exception:
+    except (InvalidId, TypeError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid ID format: '{id_str}'. Must be a 24-character hexadecimal string.",
-        )
+        ) from exc
 
 
 def serialize_doc(doc: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:

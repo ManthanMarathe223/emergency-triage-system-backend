@@ -90,7 +90,10 @@ def update_hospital(
 
     update_fields = payload.model_dump(exclude_unset=True)
     if not update_fields:
-        return serialize_doc(hospital)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="At least one hospital field must be provided.",
+        )
 
     now = datetime.now(timezone.utc)
     update_fields["updated_at"] = now
@@ -100,7 +103,7 @@ def update_hospital(
     current_avail = update_fields.get("available_beds", hospital.get("available_beds", 0))
     if current_avail > current_total:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="available_beds cannot exceed total_beds",
         )
 

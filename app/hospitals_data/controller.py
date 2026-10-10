@@ -39,18 +39,17 @@ def create_hospital_data(
     # Automatically keep the parent hospital's bed summary synchronized
     total_beds = payload.general_beds_total + payload.icu_beds_total
     available_beds = payload.general_beds_available + payload.icu_beds_available
-    if total_beds > 0:
-        db.hospitals.update_one(
-            {"_id": hosp_obj_id},
-            {
-                "$set": {
-                    "total_beds": total_beds,
-                    "available_beds": available_beds,
-                    "availability_updated_at": now,
-                    "updated_at": now,
-                }
-            },
-        )
+    db.hospitals.update_one(
+        {"_id": hosp_obj_id},
+        {
+            "$set": {
+                "total_beds": total_beds,
+                "available_beds": available_beds,
+                "availability_updated_at": now,
+                "updated_at": now,
+            }
+        },
+    )
 
     return serialize_doc(doc)
 
@@ -69,7 +68,24 @@ def update_hospital_data(
 
     update_fields = payload.model_dump(exclude_unset=True)
     if not update_fields:
-        return serialize_doc(existing)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="At least one operational data field must be provided.",
+        )
+
+    merged = {**existing, **update_fields}
+    capacity_pairs = (
+        ("general_beds_total", "general_beds_available"),
+        ("icu_beds_total", "icu_beds_available"),
+        ("ventilators_total", "ventilators_available"),
+        ("doctors_total", "doctors_available"),
+    )
+    for total_field, available_field in capacity_pairs:
+        if merged.get(available_field, 0) > merged.get(total_field, 0):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"{available_field} cannot exceed {total_field}",
+            )
 
     now = datetime.now(timezone.utc)
     update_fields["updated_at"] = now
@@ -91,20 +107,22 @@ def update_hospital_data(
             icu_avail = updated.get("icu_beds_available", 0)
             total = gen_total + icu_total
             avail = gen_avail + icu_avail
-            if total > 0:
-                db.hospitals.update_one(
-                    {"_id": hosp_obj_id},
-                    {
-                        "$set": {
-                            "total_beds": total,
-                            "available_beds": avail,
-                            "availability_updated_at": now,
-                            "updated_at": now,
-                        }
-                    },
-                )
-        except Exception:
-            pass
+            db.hospitals.update_one(
+                {"_id": hosp_obj_id},
+                {
+                    "$set": {
+                        "total_beds": total,
+                        "available_beds": avail,
+                        "availability_updated_at": now,
+                        "updated_at": now,
+                    }
+                },
+            )
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Hospital resource data was updated, but the hospital summary could not be synchronized.",
+            ) from exc
 
     return serialize_doc(updated)
 

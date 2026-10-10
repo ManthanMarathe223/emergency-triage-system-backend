@@ -47,6 +47,18 @@ def test_create_list_and_get_hospital():
         listed = client.get("/hospitals/")
         assert listed.status_code == 200
         assert listed.json()[0]["registration_number"] == "CGH-001"
+        assert set(listed.json()[0]) == {
+            "id",
+            "name",
+            "registration_number",
+            "address",
+            "latitude",
+            "longitude",
+            "total_beds",
+            "available_beds",
+            "is_active",
+            "availability_updated_at",
+        }
 
         retrieved = client.get(f"/hospitals/{hospital_id}")
         assert retrieved.status_code == 200
@@ -87,8 +99,10 @@ def test_update_hospital_details():
         )
         assert updated.status_code == 200
         assert updated.json()["name"] == "City Advanced Trauma Center"
-        assert updated.json()["contact_number"] == "+1-800-555-0199"
         assert updated.json()["address"] == "99 Emergency Blvd"
+        assert "contact_number" not in updated.json()
+        assert "created_at" not in updated.json()
+        assert "updated_at" not in updated.json()
 
 
 def test_update_availability_updates_value_and_timestamp():
@@ -171,3 +185,21 @@ def test_missing_hospital_returns_not_found():
             ).status_code
             == 404
         )
+
+
+def test_invalid_and_empty_hospital_updates_are_rejected():
+    with TestClient(app) as client:
+            assert client.get("/hospitals/not-an-object-id").status_code == 400
+            assert client.patch(
+                "/hospitals/not-an-object-id/availability",
+                json={"total_beds": 10, "available_beds": 5},
+            ).status_code == 400
+
+            hospital_id = client.post(
+                "/hospitals/register", json=hospital_payload()
+            ).json()["id"]
+            assert client.patch(f"/hospitals/{hospital_id}", json={}).status_code == 422
+            assert client.patch(
+                f"/hospitals/{hospital_id}",
+                json={"unknown_field": "rejected"},
+            ).status_code == 422

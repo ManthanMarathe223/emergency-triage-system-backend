@@ -60,6 +60,8 @@ def test_create_and_fetch_hospital_data():
         assert data["doctors_total"] == 12
         assert data["doctors_available"] == 6
         assert data["triage_status"] == "NORMAL"
+        assert "created_at" not in data
+        assert "updated_at" not in data
         data_id = data["id"]
 
         # Check get single record endpoint
@@ -126,6 +128,27 @@ def test_update_and_delete_hospital_data():
 
         # Verify not found after deletion
         assert client.get(f"/hospitals-data/{data_id}").status_code == 404
+
+
+def test_partial_resource_update_cannot_exceed_existing_capacity():
+    with TestClient(app) as client:
+        hosp_id = create_sample_hospital(client)
+        created = client.post(
+            "/hospitals-data/",
+            json={
+                "hospital_id": hosp_id,
+                "general_beds_total": 10,
+                "general_beds_available": 5,
+            },
+        )
+        data_id = created.json()["id"]
+
+        response = client.patch(
+            f"/hospitals-data/{data_id}",
+            json={"general_beds_available": 11},
+        )
+        assert response.status_code == 422
+        assert client.patch(f"/hospitals-data/{data_id}", json={}).status_code == 422
 
 
 def test_hospital_data_for_invalid_hospital_fails():
