@@ -7,9 +7,9 @@ FastAPI & MongoDB foundation for HLTH-02 Real-Time Emergency Resource Allocator.
 From this project directory:
 
 ```cmd
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+venv\Scripts\python.exe -m pip install -r requirements.txt
+venv\Scripts\python.exe -m pytest -q
+venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
 ### Environment Configuration
@@ -17,6 +17,8 @@ From this project directory:
 Configure in `.env`:
 - `MONGODB_URL`: MongoDB connection string (default: `mongodb://localhost:27017`)
 - `DATABASE_NAME`: Database name (default: `emergency_triage_db`)
+- `JWT_SECRET_KEY`: Random secret of at least 32 characters; required in production
+- `ENVIRONMENT`: `development` locally or `production` on deployment
 - `FRONTEND_ORIGIN`: Allowed frontend origin for CORS (e.g. `https://emergency-triage-six.vercel.app`)
 
 During testing, `TESTING=1` enables an in-memory MongoMock database with zero external dependencies.
@@ -112,3 +114,19 @@ Authorization: Bearer <access_token>
 Access tokens expire after `ACCESS_TOKEN_EXPIRE_MINUTES`. Refresh tokens expire
 after `REFRESH_TOKEN_EXPIRE_DAYS` and must only be sent to
 `POST /hospitals/refresh`.
+
+## Vercel deployment
+
+The repository includes `vercel.json`, which maps `app/main.py` to the Vercel
+Python runtime. Configure these Vercel project environment variables:
+
+- `MONGODB_URL`: MongoDB Atlas `mongodb+srv://...` connection string
+- `DATABASE_NAME`: Atlas database name
+- `JWT_SECRET_KEY`: long random secret, at least 32 characters
+- `FRONTEND_ORIGIN`: `https://emergency-triage-six.vercel.app`
+- `ENVIRONMENT`: `production`
+
+Production startup fails clearly if the database variables, TLS-enabled Atlas
+URI, or JWT secret are missing. The MongoDB client is cached and configured
+with bounded connection and server-selection timeouts for warm serverless
+invocations.

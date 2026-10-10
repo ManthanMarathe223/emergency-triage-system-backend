@@ -14,10 +14,15 @@ from app.utils.database import serialize_doc, to_object_id
 
 
 def create_hospital_data(
-    db: Database, payload: HospitalDataCreateDTO
+    db: Database, payload: HospitalDataCreateDTO, authenticated_hospital_id: str
 ) -> dict[str, Any]:
     """Create a new operational data record for a hospital and sync bed summaries."""
     hosp_obj_id = to_object_id(payload.hospital_id)
+    if payload.hospital_id != authenticated_hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to update this hospital.",
+        )
     hospital = db.hospitals.find_one({"_id": hosp_obj_id})
     if hospital is None:
         raise HTTPException(
@@ -55,11 +60,16 @@ def create_hospital_data(
 
 
 def update_hospital_data(
-    db: Database, data_id: str, payload: HospitalDataUpdateDTO
+    db: Database,
+    data_id: str,
+    payload: HospitalDataUpdateDTO,
+    authenticated_hospital_id: str,
 ) -> dict[str, Any]:
     """Update an existing operational data record and sync bed summaries if changed."""
     data_obj_id = to_object_id(data_id)
-    existing = db.hospitals_data.find_one({"_id": data_obj_id})
+    existing = db.hospitals_data.find_one(
+        {"_id": data_obj_id, "hospital_id": authenticated_hospital_id}
+    )
     if existing is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -91,7 +101,7 @@ def update_hospital_data(
     update_fields["updated_at"] = now
 
     updated = db.hospitals_data.find_one_and_update(
-        {"_id": data_obj_id},
+        {"_id": data_obj_id, "hospital_id": authenticated_hospital_id},
         {"$set": update_fields},
         return_document=ReturnDocument.AFTER,
     )
@@ -128,11 +138,13 @@ def update_hospital_data(
 
 
 def delete_hospital_data(
-    db: Database, data_id: str
+    db: Database, data_id: str, authenticated_hospital_id: str
 ) -> HospitalDataDeleteResponseDTO:
     """Delete an operational data record by its ID."""
     data_obj_id = to_object_id(data_id)
-    result = db.hospitals_data.delete_one({"_id": data_obj_id})
+    result = db.hospitals_data.delete_one(
+        {"_id": data_obj_id, "hospital_id": authenticated_hospital_id}
+    )
     if result.deleted_count == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -145,10 +157,14 @@ def delete_hospital_data(
     )
 
 
-def get_hospital_data_by_id(db: Database, data_id: str) -> dict[str, Any]:
+def get_hospital_data_by_id(
+    db: Database, data_id: str, authenticated_hospital_id: str
+) -> dict[str, Any]:
     """Retrieve a single operational data record by ID."""
     data_obj_id = to_object_id(data_id)
-    record = db.hospitals_data.find_one({"_id": data_obj_id})
+    record = db.hospitals_data.find_one(
+        {"_id": data_obj_id, "hospital_id": authenticated_hospital_id}
+    )
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -157,9 +173,16 @@ def get_hospital_data_by_id(db: Database, data_id: str) -> dict[str, Any]:
     return serialize_doc(record)
 
 
-def get_latest_hospital_data(db: Database, hospital_id: str) -> dict[str, Any]:
+def get_latest_hospital_data(
+    db: Database, hospital_id: str, authenticated_hospital_id: str
+) -> dict[str, Any]:
     """Retrieve the most recent operational data record for a given hospital."""
     hosp_obj_id = to_object_id(hospital_id)
+    if hospital_id != authenticated_hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hospital not found.",
+        )
     hospital = db.hospitals.find_one({"_id": hosp_obj_id})
     if hospital is None:
         raise HTTPException(
@@ -180,10 +203,18 @@ def get_latest_hospital_data(db: Database, hospital_id: str) -> dict[str, Any]:
 
 
 def get_hospital_data_history(
-    db: Database, hospital_id: str, limit: int = 50
+    db: Database,
+    hospital_id: str,
+    authenticated_hospital_id: str,
+    limit: int = 50,
 ) -> list[dict[str, Any]]:
     """Retrieve operational data history for a given hospital."""
     hosp_obj_id = to_object_id(hospital_id)
+    if hospital_id != authenticated_hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hospital not found.",
+        )
     hospital = db.hospitals.find_one({"_id": hosp_obj_id})
     if hospital is None:
         raise HTTPException(
@@ -200,10 +231,12 @@ def get_hospital_data_history(
 
 
 def list_all_hospitals_data(
-    db: Database, limit: int = 100
+    db: Database, authenticated_hospital_id: str, limit: int = 100
 ) -> list[dict[str, Any]]:
     """Retrieve recent operational data entries across all hospitals."""
     records = list(
-        db.hospitals_data.find().sort("recorded_at", -1).limit(limit)
+        db.hospitals_data.find(
+            {"hospital_id": authenticated_hospital_id}
+        ).sort("recorded_at", -1).limit(limit)
     )
     return [serialize_doc(r) for r in records]
