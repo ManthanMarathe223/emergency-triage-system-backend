@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app.hospitals.router import router as hospital_router
 from app.hospitals_data.router import router as hospitals_data_router
+from app.triage.router import router as triage_router
 from app.utils.database import init_db
 from app.utils.security import validate_security_config
 
@@ -45,6 +46,7 @@ app.add_middleware(
 
 app.include_router(hospital_router)
 app.include_router(hospitals_data_router)
+app.include_router(triage_router)
 
 
 class HealthResponse(BaseModel):

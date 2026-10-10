@@ -1,0 +1,117 @@
+{
+  "data_origin": "SYNTHETIC simulator output. Not validated on real hospital data.",
+  "dataset_rows": 139538,
+  "dataset_sha256": "28f31bbe000b5827b8ae9c512f4da16fe83e7e668d6c3bcb4858d812fd9554a9",
+  "decision_threshold": 0.4,
+  "decision_threshold_source": "validation runs, best accuracy on the configured grid",
+  "derived_features": [
+    "available_margin",
+    "horizon_minutes",
+    "free_fraction"
+  ],
+  "feature_schema_version": "fs-snapshot-1",
+  "generator_version": "2.1.0",
+  "input_fields": [
+    "resource_type",
+    "units_required",
+    "total_capacity",
+    "reported_available",
+    "report_age_minutes",
+    "estimated_travel_minutes"
+  ],
+  "model_file": "availability_model.json",
+  "model_format": "gradient-boosted-trees-json-v1",
+  "model_id": "1.2.0+28f31bbe000b",
+  "model_sha256": "58288391f01621a01082e89177202df8ac61763ec8f1676fedf5244fc9a71402",
+  "model_type": "hist_gradient_boosting",
+  "model_version": "1.2.0",
+  "monotonic_constraints": {
+    "available_margin": 1,
+    "free_fraction": 1,
+    "reported_available": 1,
+    "units_required": -1
+  },
+  "parity_check": {
+    "compared": "scikit-learn predict_proba versus backend_model/tree_model.py reading the exported JSON",
+    "dataset_rows_checked": 139538,
+    "largest_difference_on_dataset_rows": 1.1102230246251565e-16,
+    "largest_difference_on_random_rows": 1.1102230246251565e-16,
+    "random_rows_checked": 20000,
+    "tolerance": 1e-12
+  },
+  "runtime_dependencies": "none: backend_model/tree_model.py uses the Python standard library only",
+  "simulated_world": "no reservation platform; hospitals report total and available units at irregular intervals",
+  "split_row_counts": {
+    "test": 27793,
+    "train": 84630,
+    "validation": 27115
+  },
+  "split_run_counts": {
+    "test": 80,
+    "train": 240,
+    "validation": 80
+  },
+  "supported_resource_types": [
+    "GENERAL_BED",
+    "ICU_BED",
+    "VENTILATOR"
+  ],
+  "test_summary": {
+    "accuracy": 0.9404166516748822,
+    "capacity_rule_accuracy": 0.9394811643219516,
+    "capacity_rule_roc_auc": 0.9089922314054855,
+    "log_loss": 0.1564194974514494,
+    "roc_auc": 0.9769556707180357,
+    "rows": 27793,
+    "runs": 80,
+    "share_truly_available": 0.7860612384413341
+  },
+  "trained_at_utc": "2026-10-10T15:12:27+00:00",
+  "trained_with": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39",
+    "python": "3.14.6",
+    "scikit-learn": "1.9.1"
+  },
+  "training_ranges": {
+    "numeric": {
+      "estimated_travel_minutes": {
+        "max": 90.0,
+        "min": 2.0
+      },
+      "report_age_minutes": {
+        "max": 1440.0,
+        "min": 0.0
+      },
+      "reported_available": {
+        "max": 410.0,
+        "min": 0.0
+      },
+      "total_capacity": {
+        "max": 999.0,
+        "min": 1.0
+      },
+      "units_required": {
+        "max": 4.0,
+        "min": 1.0
+      }
+    },
+    "total_capacity_by_resource": {
+      "GENERAL_BED": {
+        "max": 999,
+        "min": 4
+      },
+      "ICU_BED": {
+        "max": 149,
+        "min": 1
+      },
+      "VENTILATOR": {
+        "max": 100,
+        "min": 1
+      }
+    }
+  },
+  "tree_nodes": 4350,
+  "trees": 150
+}

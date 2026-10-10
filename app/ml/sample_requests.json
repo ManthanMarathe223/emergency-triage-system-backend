@@ -1,0 +1,336 @@
+{
+  "model_id": "1.2.0+28f31bbe000b",
+  "note": "Rows from the synthetic dataset with the probability this model gives. Used by the backend's self-test.",
+  "samples": [
+    {
+      "expected_probability": 0.9999842019476266,
+      "request": {
+        "estimated_travel_minutes": 72,
+        "report_age_minutes": 4,
+        "reported_available": 122,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 594,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9990224136388491,
+      "request": {
+        "estimated_travel_minutes": 8,
+        "report_age_minutes": 1174,
+        "reported_available": 18,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 56,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.1230004929885797,
+      "request": {
+        "estimated_travel_minutes": 21,
+        "report_age_minutes": 73,
+        "reported_available": 0,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 4,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.5434612780072176,
+      "request": {
+        "estimated_travel_minutes": 8,
+        "report_age_minutes": 779,
+        "reported_available": 0,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 22,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.864672736166822,
+      "request": {
+        "estimated_travel_minutes": 30,
+        "report_age_minutes": 13,
+        "reported_available": 1,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 17,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9999743056463266,
+      "request": {
+        "estimated_travel_minutes": 26,
+        "report_age_minutes": 22,
+        "reported_available": 39,
+        "resource_type": "ICU_BED",
+        "total_capacity": 96,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9992837831850816,
+      "request": {
+        "estimated_travel_minutes": 77,
+        "report_age_minutes": 1392,
+        "reported_available": 18,
+        "resource_type": "ICU_BED",
+        "total_capacity": 54,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9998911771707891,
+      "request": {
+        "estimated_travel_minutes": 89,
+        "report_age_minutes": 62,
+        "reported_available": 20,
+        "resource_type": "ICU_BED",
+        "total_capacity": 26,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9998982294623092,
+      "request": {
+        "estimated_travel_minutes": 55,
+        "report_age_minutes": 152,
+        "reported_available": 29,
+        "resource_type": "ICU_BED",
+        "total_capacity": 149,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9867308260344572,
+      "request": {
+        "estimated_travel_minutes": 77,
+        "report_age_minutes": 7,
+        "reported_available": 2,
+        "resource_type": "ICU_BED",
+        "total_capacity": 6,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9999642473846828,
+      "request": {
+        "estimated_travel_minutes": 33,
+        "report_age_minutes": 27,
+        "reported_available": 35,
+        "resource_type": "ICU_BED",
+        "total_capacity": 96,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9995817565336089,
+      "request": {
+        "estimated_travel_minutes": 23,
+        "report_age_minutes": 78,
+        "reported_available": 9,
+        "resource_type": "ICU_BED",
+        "total_capacity": 54,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.999849570617579,
+      "request": {
+        "estimated_travel_minutes": 31,
+        "report_age_minutes": 82,
+        "reported_available": 18,
+        "resource_type": "ICU_BED",
+        "total_capacity": 26,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9998520863313858,
+      "request": {
+        "estimated_travel_minutes": 63,
+        "report_age_minutes": 389,
+        "reported_available": 29,
+        "resource_type": "ICU_BED",
+        "total_capacity": 149,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9962071193920363,
+      "request": {
+        "estimated_travel_minutes": 11,
+        "report_age_minutes": 7,
+        "reported_available": 2,
+        "resource_type": "ICU_BED",
+        "total_capacity": 6,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9999175948757721,
+      "request": {
+        "estimated_travel_minutes": 21,
+        "report_age_minutes": 15,
+        "reported_available": 13,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 47,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.9594978846015022,
+      "request": {
+        "estimated_travel_minutes": 64,
+        "report_age_minutes": 267,
+        "reported_available": 4,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 10,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.0019651042715201454,
+      "request": {
+        "estimated_travel_minutes": 51,
+        "report_age_minutes": 33,
+        "reported_available": 0,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 5,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.9999687068041158,
+      "request": {
+        "estimated_travel_minutes": 65,
+        "report_age_minutes": 23,
+        "reported_available": 95,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 594,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.9997862478142474,
+      "request": {
+        "estimated_travel_minutes": 69,
+        "report_age_minutes": 16,
+        "reported_available": 17,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 56,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.010459778036676222,
+      "request": {
+        "estimated_travel_minutes": 15,
+        "report_age_minutes": 269,
+        "reported_available": 0,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 4,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.042486867267646056,
+      "request": {
+        "estimated_travel_minutes": 34,
+        "report_age_minutes": 93,
+        "reported_available": 0,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 22,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.004900797311449717,
+      "request": {
+        "estimated_travel_minutes": 49,
+        "report_age_minutes": 2,
+        "reported_available": 0,
+        "resource_type": "GENERAL_BED",
+        "total_capacity": 17,
+        "units_required": 3
+      }
+    },
+    {
+      "expected_probability": 0.9999004864135097,
+      "request": {
+        "estimated_travel_minutes": 71,
+        "report_age_minutes": 9,
+        "reported_available": 14,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 47,
+        "units_required": 2
+      }
+    },
+    {
+      "expected_probability": 0.9693831120118945,
+      "request": {
+        "estimated_travel_minutes": 73,
+        "report_age_minutes": 209,
+        "reported_available": 3,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 10,
+        "units_required": 2
+      }
+    },
+    {
+      "expected_probability": 0.168384454188505,
+      "request": {
+        "estimated_travel_minutes": 43,
+        "report_age_minutes": 204,
+        "reported_available": 1,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 5,
+        "units_required": 2
+      }
+    },
+    {
+      "expected_probability": 0.7725631168649234,
+      "request": {
+        "estimated_travel_minutes": 87,
+        "report_age_minutes": 242,
+        "reported_available": 2,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 2,
+        "units_required": 2
+      }
+    },
+    {
+      "expected_probability": 0.9786152046072446,
+      "request": {
+        "estimated_travel_minutes": 19,
+        "report_age_minutes": 2,
+        "reported_available": 2,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 2,
+        "units_required": 2
+      }
+    },
+    {
+      "expected_probability": 0.999901648826254,
+      "request": {
+        "estimated_travel_minutes": 38,
+        "report_age_minutes": 23,
+        "reported_available": 15,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 47,
+        "units_required": 1
+      }
+    },
+    {
+      "expected_probability": 0.9861033003378797,
+      "request": {
+        "estimated_travel_minutes": 15,
+        "report_age_minutes": 39,
+        "reported_available": 2,
+        "resource_type": "VENTILATOR",
+        "total_capacity": 10,
+        "units_required": 1
+      }
+    }
+  ]
+}
