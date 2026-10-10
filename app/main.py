@@ -4,21 +4,21 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import create_tables
-from app.routers import router as hospital_router
+from app.hospitals.router import router as hospital_router
+from app.hospitals_data.router import router as hospitals_data_router
+from app.utils.database import init_db
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if not os.getenv("TESTING"):
-        create_tables()
+    init_db()
     yield
 
 
 app = FastAPI(
     title="Emergency Resource Allocator API",
-    description="Hospital registration and bed availability foundation for HLTH-02.",
-    version="0.1.0",
+    description="Hospital registration, management, and operational resource allocation API powered by MongoDB.",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -35,10 +35,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+
 app.include_router(hospital_router)
+app.include_router(hospitals_data_router)
 
 
 @app.get("/health", tags=["health"])

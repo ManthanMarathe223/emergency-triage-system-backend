@@ -1,53 +1,68 @@
 # Emergency Resource Allocator Backend
 
-FastAPI foundation for HLTH-02 Real-Time Emergency Resource Allocator. The
-current phase provides hospital registration and reported bed availability.
-Emergency assignment, ranking, authentication, and reservation workflows are
-intentionally not implemented yet.
+FastAPI & MongoDB foundation for HLTH-02 Real-Time Emergency Resource Allocator. Provides hospital registration, login, profile management, and operational resource metrics (beds, ICU, ventilators, oxygen cylinders, on-duty doctors, and triage status).
 
 ## Setup and run on Windows
 
 From this project directory:
 
 ```cmd
-venv\Scripts\python.exe -m pip install -r requirements.txt
-venv\Scripts\python.exe -m pytest -q
-venv\Scripts\python.exe -m uvicorn app.main:app --reload
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-The default development database is `emergency_resource.db`. Set
-`DATABASE_URL` to use another SQLAlchemy-supported database URL. `FRONTEND_ORIGIN`
-can add one additional legitimate frontend origin.
+### Environment Configuration
 
-## API
+Configure in `.env`:
+- `MONGODB_URL`: MongoDB connection string (default: `mongodb://localhost:27017`)
+- `DATABASE_NAME`: Database name (default: `emergency_triage_db`)
+- `FRONTEND_ORIGIN`: Allowed frontend origin for CORS (e.g. `https://emergency-triage-six.vercel.app`)
 
-- `GET /health` returns `{"status":"ok"}`.
-- `POST /hospitals/` registers a hospital.
-- `GET /hospitals/` lists hospitals.
-- `GET /hospitals/{hospital_id}` retrieves one hospital.
-- `PATCH /hospitals/{hospital_id}/availability` updates total and available beds.
+During testing, `TESTING=1` enables an in-memory MongoMock database with zero external dependencies.
 
-Example registration request:
+## Project Architecture
 
-```json
-{
-  "name": "City General Hospital",
-  "registration_number": "CGH-001",
-  "address": "1 Main Street",
-  "latitude": 18.5204,
-  "longitude": 73.8567,
-  "total_beds": 100,
-  "available_beds": 40,
-  "is_active": true
-}
+```text
+app/
+├── hospitals/               # Hospital feature
+│   ├── model.py             # Hospital document structure
+│   ├── dto.py               # Request/Response schemas (Register, Login, Update, Detail)
+│   ├── controller.py        # Business logic (register, login, update, list, detail)
+│   └── router.py            # API routes (/hospitals)
+├── hospitals_data/          # Operational resources & triage metrics feature
+│   ├── model.py             # HospitalData document structure
+│   ├── dto.py               # Schemas for beds, ICU, ventilators, oxygen, doctors
+│   ├── controller.py        # Full CRUD logic and parent hospital bed synchronization
+│   └── router.py            # API routes (/hospitals-data)
+├── utils/                   # Shared utilities
+│   ├── database.py          # MongoDB client, database provider, ObjectId helpers, index setup
+│   └── security.py          # Password hashing and verification
+└── main.py                  # FastAPI app configuration, CORS, and router registration
 ```
 
-Open `http://127.0.0.1:8000/docs` after starting the server. Use `POST
-/hospitals/` with the example, copy the returned `id`, then try the list,
-detail, and availability endpoints. Invalid coordinates, negative bed counts,
-and available beds greater than total beds return `422`; duplicate registration
-numbers return `409`; unknown IDs return `404`.
+## API Endpoints
 
-The configured production frontend origin is
-`https://emergency-triage-six.vercel.app`. CORS configuration does not itself
-claim that the deployed frontend is connected to a running backend.
+### Hospitals (`/hospitals`)
+- `POST /hospitals/register`: Register a hospital with bed capacity & portal credentials.
+- `POST /hospitals/login`: Simple credential verification without JWT.
+- `GET /hospitals/`: List all registered hospitals.
+- `GET /hospitals/{hospital_id}`: Retrieve single hospital details.
+- `PUT /hospitals/{hospital_id}`: Update hospital profile & capacity details.
+- `PATCH /hospitals/{hospital_id}`: Partial update hospital profile.
+- `PATCH /hospitals/{hospital_id}/availability`: Update hospital bed counts.
+
+### Hospitals Operational Data (`/hospitals-data`)
+- `POST /hospitals-data/`: Create operational resource entry (beds, ICU, ventilators, oxygen, doctors on-duty, triage status).
+- `GET /hospitals-data/`: List all recent operational data records.
+- `GET /hospitals-data/{data_id}`: Get single operational record by ID.
+- `PUT /hospitals-data/{data_id}`: Update operational record and resource counts.
+- `PATCH /hospitals-data/{data_id}`: Partial update operational record.
+- `DELETE /hospitals-data/{data_id}`: Delete operational data record.
+- `GET /hospitals-data/hospital/{hospital_id}/latest`: Get latest metrics for a hospital.
+- `GET /hospitals-data/hospital/{hospital_id}/history`: Get historical logs for a hospital.
+
+### Health
+- `GET /health`: Health check (`{"status": "ok"}`).
+
+Interactive Swagger UI documentation is available at `http://127.0.0.1:8000/docs`.

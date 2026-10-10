@@ -1,46 +1,19 @@
 import os
 from datetime import datetime
-from pathlib import Path
 
 os.environ["TESTING"] = "1"
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, get_db
 from app.main import app
-
-
-TEST_DATABASE_PATH = Path(__file__).with_name("test_hospitals.sqlite")
-test_engine = create_engine(
-    f"sqlite:///{TEST_DATABASE_PATH}",
-    connect_args={"check_same_thread": False},
-)
-TestingSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)
-
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
+from app.utils.database import get_database, init_db
 
 
 def setup_function():
-    Base.metadata.drop_all(bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
-
-
-def teardown_module():
-    app.dependency_overrides.clear()
-    test_engine.dispose()
-    if TEST_DATABASE_PATH.exists():
-        TEST_DATABASE_PATH.unlink()
+    db = get_database()
+    db.hospitals.drop()
+    db.hospitals_data.drop()
+    init_db()
 
 
 def hospital_payload(**overrides):
@@ -82,24 +55,45 @@ def test_create_list_and_get_hospital():
 
 def test_duplicate_registration_is_rejected():
     with TestClient(app) as client:
-        assert client.post("/hospitals/", json=hospital_payload()).status_code == 201
-        duplicate = client.post("/hospitals/", json=hospital_payload(name="Another Hospital"))
+        assert client.post("/hospitals/register", json=hospital_payload()).status_code == 201
+        duplicate = client.post(
+            "/hospitals/register", json=hospital_payload(name="Another Hospital")
+        )
     assert duplicate.status_code == 409
 
 
 def test_invalid_coordinates_and_bed_values_are_rejected():
     with TestClient(app) as client:
-        assert client.post("/hospitals/", json=hospital_payload(latitude=91)).status_code == 422
-        assert client.post("/hospitals/", json=hospital_payload(longitude=-181)).status_code == 422
-        assert client.post("/hospitals/", json=hospital_payload(total_beds=-1)).status_code == 422
+        assert client.post("/hospitals/register", json=hospital_payload(latitude=91)).status_code == 422
+        assert client.post("/hospitals/register", json=hospital_payload(longitude=-181)).status_code == 422
+        assert client.post("/hospitals/register", json=hospital_payload(total_beds=-1)).status_code == 422
         assert client.post(
-            "/hospitals/", json=hospital_payload(available_beds=101)
+            "/hospitals/register", json=hospital_payload(available_beds=101)
         ).status_code == 422
+
+
+def test_update_hospital_details():
+    with TestClient(app) as client:
+        created = client.post("/hospitals/register", json=hospital_payload())
+        hospital_id = created.json()["id"]
+
+        updated = client.put(
+            f"/hospitals/{hospital_id}",
+            json={
+                "name": "City Advanced Trauma Center",
+                "contact_number": "+1-800-555-0199",
+                "address": "99 Emergency Blvd",
+            },
+        )
+        assert updated.status_code == 200
+        assert updated.json()["name"] == "City Advanced Trauma Center"
+        assert updated.json()["contact_number"] == "+1-800-555-0199"
+        assert updated.json()["address"] == "99 Emergency Blvd"
 
 
 def test_update_availability_updates_value_and_timestamp():
     with TestClient(app) as client:
-        created = client.post("/hospitals/", json=hospital_payload())
+        created = client.post("/hospitals/register", json=hospital_payload())
         hospital_id = created.json()["id"]
         original_timestamp = datetime.fromisoformat(
             created.json()["availability_updated_at"]
@@ -112,23 +106,68 @@ def test_update_availability_updates_value_and_timestamp():
         assert updated.status_code == 200
         assert updated.json()["available_beds"] == 75
         assert updated.json()["total_beds"] == 120
-        assert datetime.fromisoformat(updated.json()["availability_updated_at"]) >= original_timestamp
+        assert (
+            datetime.fromisoformat(updated.json()["availability_updated_at"])
+            >= original_timestamp
+        )
+
+
+def test_register_and_login_hospital():
+    with TestClient(app) as client:
+        reg_payload = hospital_payload(
+            registration_number="HOSP-AUTH-1",
+            password="securepassword123",
+        )
+        response = client.post("/hospitals/register", json=reg_payload)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["registration_number"] == "HOSP-AUTH-1"
+        assert "password" not in data
+        assert "password_hash" not in data
+
+        # Login with valid credentials
+        login_response = client.post(
+            "/hospitals/login",
+            json={
+                "registration_number": "HOSP-AUTH-1",
+                "password": "securepassword123",
+            },
+        )
+        assert login_response.status_code == 200
+        login_data = login_response.json()
+        assert login_data["message"] == "Login successful"
+        assert login_data["hospital"]["registration_number"] == "HOSP-AUTH-1"
+
+        # Login with invalid password
+        bad_pw_response = client.post(
+            "/hospitals/login",
+            json={
+                "registration_number": "HOSP-AUTH-1",
+                "password": "wrongpassword",
+            },
+        )
+        assert bad_pw_response.status_code == 401
+        assert "Invalid registration number or password" in bad_pw_response.json()["detail"]
+
+        # Login with unknown registration number
+        not_found_response = client.post(
+            "/hospitals/login",
+            json={
+                "registration_number": "NON-EXISTENT",
+                "password": "anypassword",
+            },
+        )
+        assert not_found_response.status_code == 401
 
 
 def test_missing_hospital_returns_not_found():
+    dummy_id = "507f1f77bcf86cd799439011"
     with TestClient(app) as client:
-        assert client.get("/hospitals/999").status_code == 404
-        assert client.patch(
-            "/hospitals/999/availability",
-            json={"total_beds": 10, "available_beds": 5},
-        ).status_code == 404
-
-
-def test_records_persist_in_isolated_database():
-    with TestClient(app) as client:
-        assert client.post("/hospitals/", json=hospital_payload()).status_code == 201
-
-    with TestClient(app) as new_client:
-        response = new_client.get("/hospitals/")
-    assert response.status_code == 200
-    assert len(response.json()) == 1
+        assert client.get(f"/hospitals/{dummy_id}").status_code == 404
+        assert (
+            client.patch(
+                f"/hospitals/{dummy_id}/availability",
+                json={"total_beds": 10, "available_beds": 5},
+            ).status_code
+            == 404
+        )

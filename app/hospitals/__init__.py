@@ -1,0 +1,1 @@
+"""Hospitals feature package."""
