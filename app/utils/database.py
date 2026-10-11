@@ -94,3 +94,7 @@ def init_db() -> None:
     db.hospitals_data.create_index([("recorded_at", -1)])
     # Latest snapshot per hospital: used by /triage/recommend and by the "latest" endpoint.
     db.hospitals_data.create_index([("hospital_id", 1), ("recorded_at", -1)])
+    db.triage_allocations.create_index("patient_id")
+    db.triage_allocations.create_index("status")
+    db.triage_allocations.create_index([("assigned_hospital_id", 1), ("status", 1)])
+    db.triage_batches.create_index("batch_id")

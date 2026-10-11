@@ -10,6 +10,7 @@ from app.hospitals_data.dto import (
     HospitalDataDeleteResponseDTO,
     HospitalDataUpdateDTO,
 )
+from app.triage.allocation_service import reconcile_allocations_for_hospital_capacity_change
 from app.utils.database import serialize_doc, to_object_id
 
 
@@ -55,6 +56,7 @@ def create_hospital_data(
             }
         },
     )
+    reconcile_allocations_for_hospital_capacity_change(db, payload.hospital_id)
 
     return serialize_doc(doc)
 
@@ -128,6 +130,7 @@ def update_hospital_data(
                     }
                 },
             )
+            reconcile_allocations_for_hospital_capacity_change(db, str(hosp_obj_id))
         except (TypeError, ValueError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

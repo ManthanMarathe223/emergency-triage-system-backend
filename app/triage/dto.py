@@ -151,3 +151,63 @@ class ModelStatusDTO(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     model_loaded: bool
+
+
+class BatchAllocationPatientDTO(TriageRecommendRequestDTO):
+    patient_id: str = Field(min_length=1, max_length=128, description="Stable patient reference within a batch")
+    created_at: Optional[datetime] = Field(default=None, description="Optional creation time for priority ordering")
+
+    @model_validator(mode="after")
+    def ensure_patient_id_is_not_blank(self) -> "BatchAllocationPatientDTO":
+        if not self.patient_id.strip():
+            raise ValueError("patient_id must not be blank")
+        return self
+
+
+class AllocationBatchRequestDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    patients: list[BatchAllocationPatientDTO] = Field(default_factory=list, min_length=1, max_length=50)
+
+
+class BatchAllocationResultDTO(BaseModel):
+    patient_id: str
+    status: Literal["ALLOCATED", "UNALLOCATED"]
+    priority: Literal["critical", "high", "moderate", "low"]
+    severity: Literal["critical", "high", "moderate", "low"]
+    hospital_id: Optional[str] = None
+    estimated_travel_minutes: Optional[int] = None
+    reserved_resources: dict[str, int] = Field(default_factory=dict)
+    reason: str
+
+
+class AllocationBatchResponseDTO(BaseModel):
+    batch_id: str
+    generated_at: datetime
+    results: list[BatchAllocationResultDTO]
+
+
+class AllocationDecisionDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=400)
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class AllocationReplanDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=400)
+    notes: Optional[str] = Field(default=None, max_length=1000)
+    updated_travel_times: dict[str, int] = Field(default_factory=dict)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def validate_updated_travel_times(self) -> "AllocationReplanDTO":
+        for hospital_id, minutes in self.updated_travel_times.items():
+            if not isinstance(hospital_id, str) or not hospital_id.strip():
+                raise ValueError("updated_travel_times keys must be non-empty hospital IDs")
+            if minutes < 0:
+                raise ValueError("updated_travel_times values must be non-negative")
+        return self
